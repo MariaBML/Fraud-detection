@@ -23,7 +23,7 @@ def load_assets():
     
     # Căutăm fișierele în folderul principal
     model_path = os.path.join(base_dir, 'xgboost.json')
-    data_path = os.path.join(base_dir, 'model_ready_data.pkl')
+    data_path = os.path.join(base_dir, 'model_ready_data_deploy.pkl')
     
     # Verificare critică: dacă nu există, anunțăm clar
     if not os.path.exists(model_path):

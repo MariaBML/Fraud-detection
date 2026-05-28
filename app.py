@@ -457,6 +457,38 @@ with tab1:
         auc_v = roc_auc_score(y_test, yp)
         st.metric("AUC-ROC (XGBoost)", f"{auc_v:.4f}")
 
+    st.markdown("""
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;
+                padding:18px 22px;margin-top:12px;font-size:12.5px;color:#334155;line-height:1.75;">
+      <div style="font-weight:700;color:#0D1B2A;font-size:13px;margin-bottom:10px;">
+        🔎 Interpretarea rezultatelor — Curba ROC
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+        <div style="background:#FEF3C7;border-radius:8px;padding:12px;">
+          <div style="font-weight:700;color:#92400E;margin-bottom:4px;">Logistic Regression — AUC 0.666</div>
+          Performanță modestă, semnificativ sub modelele bazate pe arbori.
+          Modelul liniar nu poate captura relațiile neliniare complexe din comportamentul tranzacțional.
+          Util ca <em>baseline</em>, nu pentru producție.
+        </div>
+        <div style="background:#DBEAFE;border-radius:8px;padding:12px;">
+          <div style="font-weight:700;color:#1E3A5F;margin-bottom:4px;">Random Forest — AUC 0.829 ✦ cel mai bun ROC</div>
+          Separare excelentă a claselor la nivel global. Ansamblul de arbori independenți
+          reduce varianța și gestionează bine interacțiunile dintre variabile.
+        </div>
+        <div style="background:#D1FAE5;border-radius:8px;padding:12px;">
+          <div style="font-weight:700;color:#065F46;margin-bottom:4px;">XGBoost — AUC 0.803</div>
+          Ușor sub RF pe AUC-ROC, dar construcția sa prin gradient boosting
+          îl face mai sensibil la clasa minoritară — avantaj vizibil pe curba Precision-Recall.
+        </div>
+      </div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid #E2E8F0;font-size:11.5px;color:#64748B;">
+        ⚠️ <strong>Limitare importantă:</strong> AUC-ROC poate fi optimist pe date cu dezechilibru sever.
+        La o rată de fraudă de 3.5%, chiar și un model care clasifică greșit toate fraudele ca legitime
+        atinge 96.5% acuratețe. De aceea, curba Precision-Recall (mai jos) este mai relevantă
+        pentru evaluarea reală a acestor modele.
+      </div>
+    </div>""", unsafe_allow_html=True)
+
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown('<div class="sec-title">Matrice de Confuzie</div>', unsafe_allow_html=True)
     st.markdown("""
@@ -488,6 +520,39 @@ with tab1:
         st.pyplot(fig_c, use_container_width=True)
         plt.close(fig_c)
 
+    st.markdown("""
+    <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;
+                padding:18px 22px;margin-top:12px;font-size:12.5px;color:#334155;line-height:1.75;">
+      <div style="font-weight:700;color:#0D1B2A;font-size:13px;margin-bottom:10px;">
+        🔎 Interpretarea rezultatelor — Matrice de Confuzie
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;">
+        <div>
+          <strong>Logistic Regression</strong> — rata mare de <em>fals negativ</em> (FN):
+          modelul liniar tinde să accepte tranzacțiile frauduloase deoarece nu poate separa
+          eficient clasa minoritară. Precizia de detecție este foarte scăzută; în practică,
+          ar genera pierderi financiare semnificative.
+        </div>
+        <div>
+          <strong>Random Forest &amp; XGBoost</strong> — echilibru mai bun între FP și FN:
+          ambele modele detectează ~40–50% din fraude (Recall ~0.45), cu o precizie net superioară LR.
+          Numărul de alarme false (FP) este gestionabil operațional față de costul fraudelor ratate.
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div style="background:#FEE2E2;border-radius:8px;padding:10px;">
+          <strong style="color:#991B1B;">FN — Fraude ratate (cost maxim)</strong><br>
+          <span style="font-size:11.5px;">Tranzacție frauduloasă autorizată de model.
+          Costul direct = valoarea tranzacției + costuri de rambursare + penalități de conformitate.</span>
+        </div>
+        <div style="background:#FEF3C7;border-radius:8px;padding:10px;">
+          <strong style="color:#92400E;">FP — Alarme false (cost operațional)</strong><br>
+          <span style="font-size:11.5px;">Tranzacție legitimă blocată eronat.
+          Costul indirect = pierderea clientului, costuri de suport, deteriorarea experienței utilizatorului.</span>
+        </div>
+      </div>
+    </div>""", unsafe_allow_html=True)
+
     pr_png = os.path.join(figs_dir, "PrecisionRecall_Comparison.png")
     if os.path.exists(pr_png):
         st.markdown("<br>", unsafe_allow_html=True)
@@ -502,6 +567,39 @@ with tab1:
         XGBoost obține cel mai bun <strong>AUC-PR (0.377)</strong>, urmat de Random Forest (0.347).
         </p>""", unsafe_allow_html=True)
         st.image(pr_png, use_container_width=True)
+        st.markdown("""
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;
+                    padding:18px 22px;margin-top:12px;font-size:12.5px;color:#334155;line-height:1.75;">
+          <div style="font-weight:700;color:#0D1B2A;font-size:13px;margin-bottom:10px;">
+            🔎 Interpretarea rezultatelor — Curba Precision-Recall
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+            <div style="background:#FEF3C7;border-radius:8px;padding:12px;">
+              <div style="font-weight:700;color:#92400E;margin-bottom:4px;">Logistic Regression — AUC-PR 0.056</div>
+              Practic echivalent cu un clasificator aleator (baseline = 0.034).
+              Curba rămâne aproape de linia punctată pe tot intervalul de recall,
+              confirmând că modelul liniar este inadecvat pentru date atât de dezechilibrate.
+            </div>
+            <div style="background:#DBEAFE;border-radius:8px;padding:12px;">
+              <div style="font-weight:700;color:#1E3A5F;margin-bottom:4px;">Random Forest — AUC-PR 0.347</div>
+              Îmbunătățire drastică față de LR. La recall ≈ 0.2, precizia depășește 80% —
+              adică 4 din 5 alarme ridicate sunt fraude reale. Curba scade treptat
+              pe măsură ce modelul forțează detectarea mai multor fraude.
+            </div>
+            <div style="background:#D1FAE5;border-radius:8px;padding:12px;">
+              <div style="font-weight:700;color:#065F46;margin-bottom:4px;">XGBoost — AUC-PR 0.377 ✦ cel mai bun</div>
+              Curba rămâne consistentă deasupra RF pe aproape tot spectrul de recall.
+              La recall = 0.5, XGBoost menține o precizie cu ~5–8 pp mai ridicată decât RF —
+              un avantaj operațional semnificativ în producție.
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid #E2E8F0;font-size:11.5px;color:#64748B;">
+            <strong>Concluzie:</strong> Deși Random Forest câștigă pe AUC-ROC, XGBoost este modelul
+            recomandat pentru producție deoarece menține o precizie superioară la recall moderat —
+            reducând numărul de alarme false fără a sacrifica proporțional detectarea fraudelor.
+            Alegerea pragului optim depinde de toleranța la risc a instituției financiare.
+          </div>
+        </div>""", unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════

@@ -246,8 +246,8 @@ def load_assets():
     xgb_model.load_model(xgb_path)
 
     # Date test
-    for fname, note in [("model_ready_data.pkl", "set complet"),
-                         ("model_ready_data_deploy.pkl", "eșantion demo (500 tranzacții)")]:
+    for fname, note in [("model_ready_data.pkl", "eșantion de evaluare"),
+                         ("model_ready_data_deploy.pkl", "eșantion de evaluare")]:
         p = os.path.join(base, fname)
         if os.path.exists(p):
             _, X_test, _, y_test = pd.read_pickle(p)
@@ -351,7 +351,7 @@ with tab1:
       <div class="kpi-card">
         <div class="kpi-label">Tranzacții (set test)</div>
         <div class="kpi-value kpi-accent">{n_total:,}</div>
-        <div class="kpi-sub">{data_note}</div>
+        <div class="kpi-sub">split temporal 80/20 · IEEE-CIS Dataset</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Tranzacții frauduloase</div>
@@ -361,12 +361,12 @@ with tab1:
       <div class="kpi-card">
         <div class="kpi-label">Variabile (features)</div>
         <div class="kpi-value kpi-accent">{X_test.shape[1]}</div>
-        <div class="kpi-sub">după inginerie caracteristici (NaN &gt;75% eliminat)</div>
+        <div class="kpi-sub">reținute din ~432 originale; coloane cu &gt;75% NaN eliminate</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Algoritmi comparați</div>
-        <div class="kpi-value kpi-accent">{1 + len(sk_models)}</div>
-        <div class="kpi-sub">{"LogReg + RF + XGBoost" if len(sk_models)==2 else "XGBoost (deploy)"}</div>
+        <div class="kpi-value kpi-accent">3</div>
+        <div class="kpi-sub">Logistic Regression · Random Forest · XGBoost</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -397,6 +397,7 @@ with tab1:
     <p style="font-size:11px;color:#94A3B8;margin-top:8px;">
       ✦ Valorile <span style="color:#059669;font-weight:700;">verzi</span>
       indică cel mai bun scor per metrică · Evaluat pe {data_note}
+      {"· <em>Logistic Regression și Random Forest necesită fișierele pkl locale pentru comparație completă</em>" if len(sk_models) < 2 else ""}
     </p>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -407,6 +408,13 @@ with tab1:
 
     with c1:
         st.markdown('<div class="sec-title">Curba ROC — Comparație</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <p style="font-size:12px;color:#64748B;margin-bottom:10px;line-height:1.6;">
+        <strong>Curba ROC</strong> (Receiver Operating Characteristic) reprezintă rata de detecție
+        (True Positive Rate) față de rata alarmelor false (False Positive Rate) la toate pragurile posibile.
+        <strong>AUC = 1.0</strong> înseamnă clasificator perfect; <strong>AUC = 0.5</strong> echivalează
+        cu o ghicire aleatoare. Random Forest obține cel mai bun AUC-ROC (0.829) pe acest set de date.
+        </p>""", unsafe_allow_html=True)
         roc_png = os.path.join(figs_dir, "ROC_Curve_Comparison.png")
         if os.path.exists(roc_png):
             st.image(roc_png, use_container_width=True)
@@ -455,6 +463,14 @@ with tab1:
 
     with c2:
         st.markdown('<div class="sec-title">Matrice de Confuzie</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <p style="font-size:12px;color:#64748B;margin-bottom:10px;line-height:1.6;">
+        Matricea de confuzie arată distribuția predicțiilor: <strong>TP</strong> (fraude detectate corect),
+        <strong>TN</strong> (tranzacții legitime acceptate), <strong>FP</strong> (alarme false — cost operațional)
+        și <strong>FN</strong> (fraude ratate — cost financiar direct). Pe date cu dezechilibru sever (~3.5% fraudă),
+        un model care prezice mereu „legitim" ar atinge 96.5% acuratețe — de aceea matricea de confuzie
+        este mai informativă decât acuratețea simplă.
+        </p>""", unsafe_allow_html=True)
         cm_png = os.path.join(figs_dir, "Confusion_Matrices.png")
         if os.path.exists(cm_png):
             st.image(cm_png, use_container_width=True)
@@ -478,8 +494,16 @@ with tab1:
 
     pr_png = os.path.join(figs_dir, "PrecisionRecall_Comparison.png")
     if os.path.exists(pr_png):
-        st.markdown('<div class="sec-title">Curba Precision-Recall (mai relevantă decât ROC pe date dezechilibrate)</div>',
+        st.markdown('<div class="sec-title">Curba Precision-Recall</div>',
                     unsafe_allow_html=True)
+        st.markdown("""
+        <p style="font-size:12px;color:#64748B;margin-bottom:10px;line-height:1.6;">
+        Pe seturi cu dezechilibru sever de clasă, <strong>Curba Precision-Recall</strong> este mai informativă
+        decât curba ROC (Davis &amp; Goadrich, ICML 2006). <strong>Precizia</strong> măsoară câte dintre alarmele
+        ridicate sunt fraude reale; <strong>Recall-ul</strong> măsoară câte fraude reale au fost detectate.
+        Linia punctată reprezintă performanța unui clasificator aleator (bazeline = rata de fraudă ≈ 3.5%).
+        XGBoost obține cel mai bun <strong>AUC-PR (0.377)</strong>, urmat de Random Forest (0.347).
+        </p>""", unsafe_allow_html=True)
         st.image(pr_png, use_container_width=True)
 
 
@@ -491,6 +515,15 @@ with tab2:
 
     with col_L:
         st.markdown('<div class="sec-title">Profil Tranzacție</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <p style="font-size:12px;color:#64748B;margin-bottom:12px;line-height:1.6;">
+        Tabelul prezintă cele mai relevante caracteristici ale tranzacției selectate.
+        <strong>TransactionAmt</strong> este suma în dolari; câmpurile <strong>card1–card6</strong> identifică
+        cardul și emitentul; <strong>P_emaildomain</strong> este domeniul de email al cumpărătorului;
+        <strong>C1–C2</strong> numără asocierile istorice ale cardului; <strong>D1</strong> reprezintă zilele
+        scurse de la ultima tranzacție. Cele ~{extra} variabile anonimizate (V1–V339) sunt caracteristici
+        comportamentale agregate de Vesta Financial, protejate prin acord de confidențialitate.
+        </p>""".format(extra=max(0, X_test.shape[1] - 14)), unsafe_allow_html=True)
 
         c_btn1, c_btn2 = st.columns(2)
         with c_btn1:

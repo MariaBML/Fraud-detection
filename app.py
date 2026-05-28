@@ -562,25 +562,46 @@ with tab2:
             st.pyplot(fig_g, use_container_width=True)
             plt.close(fig_g)
 
+            st.markdown("""
+            <p style="font-size:11px;color:#64748B;text-align:center;
+                       margin:-6px 0 14px;line-height:1.6;">
+              Manometrul indică probabilitatea de fraudă estimată de model pentru această tranzacție.<br>
+              <span style="color:#059669;font-weight:600;">■ 0–30%</span> risc scăzut &nbsp;·&nbsp;
+              <span style="color:#D97706;font-weight:600;">■ 30–60%</span> risc mediu &nbsp;·&nbsp;
+              <span style="color:#DC2626;font-weight:600;">■ 60–100%</span> risc ridicat
+            </p>""", unsafe_allow_html=True)
+
             if pred == 1:
-                real_txt = ("⚠️ Fraudă confirmată" if real == 1
-                            else "✅ Tranzacție legitimă — <strong>fals pozitiv</strong>")
+                if real == 1:
+                    real_label = "⚠️ Fraudă confirmată"
+                    real_style = ("font-size:13px;font-weight:600;color:#059669;"
+                                  "margin-top:10px;")
+                else:
+                    real_label = "✅ Tranzacție legitimă — <strong>fals pozitiv</strong>"
+                    real_style = "font-size:13px;color:#D97706;margin-top:10px;"
                 st.markdown(f"""
                 <div class="dec-fraud">
                   <div class="dec-icon">⛔</div>
                   <div class="dec-lbl">Decizie XGBoost</div>
                   <div class="dec-txt" style="color:#DC2626;">TRANZACȚIE BLOCATĂ</div>
-                  <div class="dec-real">Etichetă reală: {real_txt}</div>
+                  <div style="{real_style}">Etichetă reală: {real_label}</div>
                 </div>""", unsafe_allow_html=True)
             else:
-                real_txt = ("⚠️ Fraudă nedetectată — <strong>fals negativ</strong>" if real == 1
-                            else "✅ Tranzacție legitimă")
+                if real == 1:
+                    real_label = "⚠️ Fraudă nedetectată — fals negativ"
+                    real_style = ("font-size:15px;font-weight:700;color:#DC2626;"
+                                  "background:rgba(220,38,38,0.10);border-radius:8px;"
+                                  "padding:10px 14px;margin-top:12px;"
+                                  "border-left:4px solid #DC2626;display:block;")
+                else:
+                    real_label = "✅ Tranzacție legitimă"
+                    real_style = "font-size:12px;color:#64748B;margin-top:8px;"
                 st.markdown(f"""
                 <div class="dec-legit">
                   <div class="dec-icon">✅</div>
                   <div class="dec-lbl">Decizie XGBoost</div>
                   <div class="dec-txt" style="color:#059669;">TRANZACȚIE AUTORIZATĂ</div>
-                  <div class="dec-real">Etichetă reală: {real_txt}</div>
+                  <div style="{real_style}">Etichetă reală: {real_label}</div>
                 </div>""", unsafe_allow_html=True)
         else:
             st.markdown("""

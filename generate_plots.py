@@ -158,13 +158,10 @@ ax.set_title("Curba Precision-Recall — Comparatie Modele\n"
 ax.legend(loc="upper right", fontsize=11, framealpha=0.9)
 ax.grid(alpha=0.25)
 
-# Nota metodologica pe grafic
-ax.text(0.01, 0.02,
-        "Nota: AUC-PR este mai relevant decat AUC-ROC cand clasele sunt dezechilibrate\n"
-        "(Davis & Goadrich, ICML 2006; He & Garcia, IEEE TKDE 2009)",
-        fontsize=8, color="#64748B", transform=ax.transAxes,
-        verticalalignment="bottom",
-        bbox=dict(boxstyle="round,pad=0.4", facecolor="#F8FAFC", alpha=0.8))
+# Referinta metodologica — plasata deasupra axei X, nu peste curbe
+fig.text(0.5, -0.04,
+         "Ref: Davis & Goadrich, ICML 2006; He & Garcia, IEEE TKDE 2009",
+         ha="center", fontsize=8, color="#94A3B8", style="italic")
 
 plt.tight_layout()
 plt.savefig(os.path.join(figures_dir, "PrecisionRecall_Comparison.png"), dpi=300)

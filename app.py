@@ -400,100 +400,97 @@ with tab1:
       {"· <em>Logistic Regression și Random Forest necesită fișierele pkl locale pentru comparație completă</em>" if len(sk_models) < 2 else ""}
     </p>""", unsafe_allow_html=True)
 
+    with st.expander("📖 Ce înseamnă aceste metrici?"):
+        st.markdown("""
+| Metrică | Formulă | Ce măsoară |
+|---|---|---|
+| **AUC-ROC** | Aria sub curba TPR vs FPR | Capacitatea globală de separare a claselor; 0.5 = aleator, 1.0 = perfect. Nu e sensibil la dezechilibru de clasă. |
+| **AUC-PR** | Aria sub curba Precizie vs Recall | Mai relevant decât AUC-ROC când clasa pozitivă (fraudă) e rară. Penalizează dur modelele care ratează fraude. |
+| **F1 (Fraudă)** | 2 · Precizie · Recall / (Precizie + Recall) | Media armonică între precizie și recall — echilibrează costul alarmelor false cu costul fraudelor ratate. |
+| **Precizie** | TP / (TP + FP) | Din toate tranzacțiile marcate ca fraudă, câte chiar erau? Precizie mare = puține alarme false. |
+| **Recall** | TP / (TP + FN) | Din toate fraudele reale, câte a detectat modelul? Recall mare = puține fraude ratate. |
+| **MCC** | Coeficient Matthews | Singura metrică robustă la orice dezechilibru de clasă; ia în calcul toate cele 4 celule din matricea de confuzie. Valori: −1 (invers perfect) → 0 (aleator) → +1 (perfect). |
+
+> **Notă:** Precizie = 1.0 cu Recall scăzut înseamnă că modelul blochează puțin dar cu certitudine mare — conservator. Recall ridicat cu Precizie scăzută = detectează mult, dar cu multe alarme false.
+        """)
+
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Charts
-    c1, c2 = st.columns(2)
+    # Charts — stacked full-width
     figs_dir = os.path.join(BASE, "figures")
 
-    with c1:
-        st.markdown('<div class="sec-title">Curba ROC — Comparație</div>', unsafe_allow_html=True)
-        st.markdown("""
-        <p style="font-size:12px;color:#64748B;margin-bottom:10px;line-height:1.6;">
-        <strong>Curba ROC</strong> (Receiver Operating Characteristic) reprezintă rata de detecție
-        (True Positive Rate) față de rata alarmelor false (False Positive Rate) la toate pragurile posibile.
-        <strong>AUC = 1.0</strong> înseamnă clasificator perfect; <strong>AUC = 0.5</strong> echivalează
-        cu o ghicire aleatoare. Random Forest obține cel mai bun AUC-ROC (0.829) pe acest set de date.
-        </p>""", unsafe_allow_html=True)
-        roc_png = os.path.join(figs_dir, "ROC_Curve_Comparison.png")
-        if os.path.exists(roc_png):
-            st.image(roc_png, use_container_width=True)
-        elif n_total >= 5000:
-            # Suficient de multe cazuri pentru o curba neteda — genereaza dinamic
-            fig_r, ax_r = plt.subplots(figsize=(6, 5))
-            colors = {"Logistic Regression": "#D97706",
-                      "Random Forest": "#1E6FD9",
-                      "XGBoost": "#059669"}
-            for nm in avail:
-                model = sk_models.get(nm, xgb_model)
-                yp = model.predict_proba(X_test)[:, 1]
-                fpr, tpr, _ = roc_curve(y_test, yp)
-                auc_v = roc_auc_score(y_test, yp)
-                # Interpolare pe grilă fină pentru afișare netedă
-                fpr_fine = np.linspace(0, 1, 1000)
-                tpr_fine = np.interp(fpr_fine, fpr, tpr)
-                ax_r.plot(fpr_fine, tpr_fine, lw=2.2, color=colors.get(nm, "#999"),
-                          label=f"{nm}  (AUC = {auc_v:.3f})")
-            ax_r.plot([0, 1], [0, 1], "--", color="#CBD5E1", lw=1.5)
-            ax_r.set_xlabel("False Positive Rate", fontsize=10)
-            ax_r.set_ylabel("True Positive Rate",  fontsize=10)
-            ax_r.legend(fontsize=9)
-            ax_r.grid(alpha=0.2)
-            fig_r.tight_layout()
-            st.pyplot(fig_r, use_container_width=True)
-            plt.close(fig_r)
-        else:
-            # Prea putine cazuri de frauda pentru o curba reprezentativa
-            st.markdown("""
-            <div style="background:#FEF9C3;border:1px solid #FDE047;border-radius:10px;
-                        padding:20px;text-align:center;color:#713F12;">
-              <div style="font-size:22px;margin-bottom:8px;">📊</div>
-              <div style="font-weight:700;margin-bottom:6px;">Grafic disponibil cu setul complet</div>
-              <div style="font-size:12px;line-height:1.6;">
-                Curba ROC necesită minim 5.000 tranzacții pentru o reprezentare vizuală corectă.<br>
-                Rulați <code>generate_plots.py</code> local, apoi <code>git push figures/</code>
-                pentru a activa graficul pe această pagină.
-              </div>
-            </div>
-            """, unsafe_allow_html=True)
-            # Arata cel putin AUC-ul numeric
-            yp = xgb_model.predict_proba(X_test)[:, 1]
+    st.markdown('<div class="sec-title">Curba ROC — Comparație</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <p style="font-size:12px;color:#64748B;margin-bottom:10px;line-height:1.6;">
+    <strong>Curba ROC</strong> (Receiver Operating Characteristic) reprezintă rata de detecție
+    (True Positive Rate) față de rata alarmelor false (False Positive Rate) la toate pragurile posibile.
+    <strong>AUC = 1.0</strong> înseamnă clasificator perfect; <strong>AUC = 0.5</strong> echivalează
+    cu o ghicire aleatoare. Random Forest obține cel mai bun AUC-ROC (0.829) pe acest set de date.
+    </p>""", unsafe_allow_html=True)
+    roc_png = os.path.join(figs_dir, "ROC_Curve_Comparison.png")
+    if os.path.exists(roc_png):
+        st.image(roc_png, use_container_width=True)
+    elif n_total >= 5000:
+        fig_r, ax_r = plt.subplots(figsize=(10, 5))
+        colors = {"Logistic Regression": "#D97706",
+                  "Random Forest": "#1E6FD9",
+                  "XGBoost": "#059669"}
+        for nm in avail:
+            model = sk_models.get(nm, xgb_model)
+            yp = model.predict_proba(X_test)[:, 1]
+            fpr, tpr, _ = roc_curve(y_test, yp)
             auc_v = roc_auc_score(y_test, yp)
-            st.metric("AUC-ROC (XGBoost, eșantion demo)", f"{auc_v:.4f}")
+            fpr_fine = np.linspace(0, 1, 1000)
+            tpr_fine = np.interp(fpr_fine, fpr, tpr)
+            ax_r.plot(fpr_fine, tpr_fine, lw=2.2, color=colors.get(nm, "#999"),
+                      label=f"{nm}  (AUC = {auc_v:.3f})")
+        ax_r.plot([0, 1], [0, 1], "--", color="#CBD5E1", lw=1.5)
+        ax_r.set_xlabel("False Positive Rate", fontsize=10)
+        ax_r.set_ylabel("True Positive Rate",  fontsize=10)
+        ax_r.legend(fontsize=9)
+        ax_r.grid(alpha=0.2)
+        fig_r.tight_layout()
+        st.pyplot(fig_r, use_container_width=True)
+        plt.close(fig_r)
+    else:
+        yp = xgb_model.predict_proba(X_test)[:, 1]
+        auc_v = roc_auc_score(y_test, yp)
+        st.metric("AUC-ROC (XGBoost)", f"{auc_v:.4f}")
 
-    with c2:
-        st.markdown('<div class="sec-title">Matrice de Confuzie</div>', unsafe_allow_html=True)
-        st.markdown("""
-        <p style="font-size:12px;color:#64748B;margin-bottom:10px;line-height:1.6;">
-        Matricea de confuzie arată distribuția predicțiilor: <strong>TP</strong> (fraude detectate corect),
-        <strong>TN</strong> (tranzacții legitime acceptate), <strong>FP</strong> (alarme false — cost operațional)
-        și <strong>FN</strong> (fraude ratate — cost financiar direct). Pe date cu dezechilibru sever (~3.5% fraudă),
-        un model care prezice mereu „legitim" ar atinge 96.5% acuratețe — de aceea matricea de confuzie
-        este mai informativă decât acuratețea simplă.
-        </p>""", unsafe_allow_html=True)
-        cm_png = os.path.join(figs_dir, "Confusion_Matrices.png")
-        if os.path.exists(cm_png):
-            st.image(cm_png, use_container_width=True)
-        else:
-            n = len(avail)
-            fig_c, axes = plt.subplots(1, n, figsize=(4.5 * n, 4))
-            if n == 1:
-                axes = [axes]
-            for i, nm in enumerate(avail):
-                model = sk_models.get(nm, xgb_model)
-                cm = confusion_matrix(y_test, model.predict(X_test))
-                sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                            ax=axes[i], cbar=False, annot_kws={"size": 13})
-                axes[i].set_title(nm, fontsize=12)
-                axes[i].set_xlabel("Predicție"); axes[i].set_ylabel("Actual")
-                axes[i].set_xticklabels(["Legitim", "Fraudă"])
-                axes[i].set_yticklabels(["Legitim", "Fraudă"], rotation=0)
-            fig_c.tight_layout()
-            st.pyplot(fig_c, use_container_width=True)
-            plt.close(fig_c)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="sec-title">Matrice de Confuzie</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <p style="font-size:12px;color:#64748B;margin-bottom:10px;line-height:1.6;">
+    Matricea de confuzie arată distribuția predicțiilor: <strong>TP</strong> (fraude detectate corect),
+    <strong>TN</strong> (tranzacții legitime acceptate), <strong>FP</strong> (alarme false — cost operațional)
+    și <strong>FN</strong> (fraude ratate — cost financiar direct). Pe date cu dezechilibru sever (~3.5% fraudă),
+    un model care prezice mereu „legitim" ar atinge 96.5% acuratețe — de aceea matricea de confuzie
+    este mai informativă decât acuratețea simplă.
+    </p>""", unsafe_allow_html=True)
+    cm_png = os.path.join(figs_dir, "Confusion_Matrices.png")
+    if os.path.exists(cm_png):
+        st.image(cm_png, use_container_width=True)
+    else:
+        n = len(avail)
+        fig_c, axes = plt.subplots(1, n, figsize=(5 * n, 4))
+        if n == 1:
+            axes = [axes]
+        for i, nm in enumerate(avail):
+            model = sk_models.get(nm, xgb_model)
+            cm = confusion_matrix(y_test, model.predict(X_test))
+            sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+                        ax=axes[i], cbar=False, annot_kws={"size": 13})
+            axes[i].set_title(nm, fontsize=12)
+            axes[i].set_xlabel("Predicție"); axes[i].set_ylabel("Actual")
+            axes[i].set_xticklabels(["Legitim", "Fraudă"])
+            axes[i].set_yticklabels(["Legitim", "Fraudă"], rotation=0)
+        fig_c.tight_layout()
+        st.pyplot(fig_c, use_container_width=True)
+        plt.close(fig_c)
 
     pr_png = os.path.join(figs_dir, "PrecisionRecall_Comparison.png")
     if os.path.exists(pr_png):
+        st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="sec-title">Curba Precision-Recall</div>',
                     unsafe_allow_html=True)
         st.markdown("""

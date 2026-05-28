@@ -1,0 +1,28 @@
+# Date brute si procesate — fisiere mari, excluse din versioning
+data/raw/
+data/processed/
+data/models/
+
+# Fisiere Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Mediu virtual
+.venv/
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Variabile de mediu
+.env

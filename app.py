@@ -640,10 +640,44 @@ with tab2:
             plt.close(fig_s)
 
         st.markdown("""
-        <p style="font-size:11px;color:#94A3B8;text-align:center;margin-top:4px;">
-        Tranzacțiile cu risc scăzut au contribuții SHAP de magnitudine mică — apasă
-        <em>⚠️ Caz de fraudă</em> pentru valori mai expresive.
-        </p>""", unsafe_allow_html=True)
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;
+                    padding:18px 22px;margin-top:10px;font-size:12.5px;color:#334155;line-height:1.75;">
+          <div style="font-weight:700;color:#0D1B2A;font-size:13px;margin-bottom:10px;">
+            📖 Cum se citește graficul SHAP
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div>
+              <strong>E[f(X)]</strong> — valoarea de bază (baseline)<br>
+              <span style="color:#64748B;">Scorul mediu al modelului pe toate tranzacțiile din antrenare,
+              exprimat în log-odds. Reprezintă punctul de pornire înainte ca variabilele
+              tranzacției curente să fie luate în calcul.</span>
+            </div>
+            <div>
+              <strong>f(x)</strong> — scorul final al acestei tranzacții<br>
+              <span style="color:#64748B;">Suma dintre baseline și toate contribuțiile SHAP individuale.
+              Cu cât f(x) este mai mare (mai puțin negativ), cu atât probabilitatea de fraudă
+              estimată de model este mai ridicată.</span>
+            </div>
+            <div>
+              <span style="color:#E11D6A;font-weight:700;">■ Bare roșii</span><br>
+              <span style="color:#64748B;">Variabile care <strong>cresc</strong> riscul față de baseline —
+              valoarea lor pentru această tranzacție este atipică față de tranzacțiile legitime obișnuite.
+              Cu cât bara e mai lungă, cu atât influența e mai mare.</span>
+            </div>
+            <div>
+              <span style="color:#3B82F6;font-weight:700;">■ Bare albastre</span><br>
+              <span style="color:#64748B;">Variabile care <strong>reduc</strong> riscul față de baseline —
+              valoarea lor sugerează că tranzacția se comportă similar cu cele legitime.
+              Ele contrabalansează semnalele de fraudă.</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding-top:10px;border-top:1px solid #E2E8F0;
+                      font-size:11px;color:#94A3B8;">
+            Numărul din stânga fiecărei variabile (ex. <em>3 = D2</em>) reprezintă
+            valoarea concretă a acelei caracteristici pentru tranzacția selectată.
+            Apasă <strong>⚠️ Caz de fraudă</strong> pentru un exemplu cu contribuții mai pronunțate.
+          </div>
+        </div>""", unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════

@@ -5,7 +5,7 @@ Balaban Maria-Laura, 2026
 import streamlit as st
 import pandas as pd
 import numpy as np
-import os, random, pickle, warnings
+import os, random, pickle, warnings, json
 import xgboost as xgb
 import shap
 import matplotlib
@@ -275,10 +275,24 @@ def load_sklearn_models(base):
 
 
 @st.cache_data
-def compute_metrics(_xgb, _X, _y, _sk):
-    """Calculează AUC-ROC, AUC-PR, F1, Precizie, Recall, MCC pentru toate modelele disponibile."""
+def load_metrics_json(base):
+    """Încarcă metrici pre-calculate din metrics.json (evaluate pe setul complet, 118.108 tranzacții)."""
+    p = os.path.join(base, "metrics.json")
+    if os.path.exists(p):
+        with open(p, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+@st.cache_data
+def compute_metrics(_xgb, _X, _y, _sk, _json_metrics):
+    """Calculează AUC-ROC, AUC-PR, F1, Precizie, Recall, MCC.
+    Modele disponibile local: calcul live. Modele lipsă: fallback din metrics.json."""
+    # Porneste cu metricile pre-calculate din JSON (toate 3 modelele)
+    out = {k: dict(v) for k, v in _json_metrics.items()}
+
+    # Suprascrie cu calcul live pentru modelele disponibile
     all_m = {**_sk, "XGBoost": _xgb}
-    out = {}
     for name, model in all_m.items():
         yp = model.predict_proba(_X)[:, 1]
         yd = model.predict(_X)
@@ -298,8 +312,9 @@ def compute_metrics(_xgb, _X, _y, _sk):
 # INIT
 # ─────────────────────────────────────────────────────────────────
 xgb_model, X_test, y_test, data_note, BASE = load_assets()
-sk_models = load_sklearn_models(BASE)
-explainer  = get_explainer(xgb_model)
+sk_models    = load_sklearn_models(BASE)
+json_metrics = load_metrics_json(BASE)
+explainer    = get_explainer(xgb_model)
 
 if "sim_idx" not in st.session_state:
     st.session_state.sim_idx = None
@@ -373,7 +388,7 @@ with tab1:
 
     # Metrics table
     st.markdown('<div class="sec-title">Comparație Performanță Algoritmi</div>', unsafe_allow_html=True)
-    metrics = compute_metrics(xgb_model, X_test, y_test, sk_models)
+    metrics = compute_metrics(xgb_model, X_test, y_test, sk_models, json_metrics)
     MK = ["AUC-ROC", "AUC-PR", "F1 (Fraudă)", "Precizie", "Recall", "MCC"]
     ORDER = ["Logistic Regression", "Random Forest", "XGBoost"]
     avail = [m for m in ORDER if m in metrics]
@@ -389,6 +404,8 @@ with tab1:
             row += f"<td{css}>{v:.4f}</td>"
         body += f"<tr>{row}</tr>"
 
+    json_note = (" · <em>LR &amp; RF: metrici evaluate pe setul complet (118.108 tranzacții)</em>"
+                 if len(sk_models) < 2 and json_metrics else "")
     st.markdown(f"""
     <table class="cmp-table">
       <thead><tr><th>Metrică</th>{hdr}</tr></thead>
@@ -396,8 +413,7 @@ with tab1:
     </table>
     <p style="font-size:11px;color:#94A3B8;margin-top:8px;">
       ✦ Valorile <span style="color:#059669;font-weight:700;">verzi</span>
-      indică cel mai bun scor per metrică · Evaluat pe {data_note}
-      {"· <em>Logistic Regression și Random Forest necesită fișierele pkl locale pentru comparație completă</em>" if len(sk_models) < 2 else ""}
+      indică cel mai bun scor per metrică · Evaluat pe {data_note}{json_note}
     </p>""", unsafe_allow_html=True)
 
     with st.expander("📖 Ce înseamnă aceste metrici?"):
@@ -425,7 +441,8 @@ with tab1:
     <strong>Curba ROC</strong> (Receiver Operating Characteristic) reprezintă rata de detecție
     (True Positive Rate) față de rata alarmelor false (False Positive Rate) la toate pragurile posibile.
     <strong>AUC = 1.0</strong> înseamnă clasificator perfect; <strong>AUC = 0.5</strong> echivalează
-    cu o ghicire aleatoare. Random Forest obține cel mai bun AUC-ROC (0.829) pe acest set de date.
+    cu o ghicire aleatoare. XGBoost obține cel mai bun AUC-ROC (0.898) pe acest set de date,
+    urmat îndeaproape de Random Forest (0.868).
     </p>""", unsafe_allow_html=True)
     roc_png = os.path.join(figs_dir, "ROC_Curve_Comparison.png")
     if os.path.exists(roc_png):
@@ -465,20 +482,20 @@ with tab1:
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
         <div style="background:#FEF3C7;border-radius:8px;padding:12px;">
-          <div style="font-weight:700;color:#92400E;margin-bottom:4px;">Logistic Regression — AUC 0.666</div>
+          <div style="font-weight:700;color:#92400E;margin-bottom:4px;">Logistic Regression — AUC 0.700</div>
           Performanță modestă, semnificativ sub modelele bazate pe arbori.
           Modelul liniar nu poate captura relațiile neliniare complexe din comportamentul tranzacțional.
           Util ca <em>baseline</em>, nu pentru producție.
         </div>
         <div style="background:#DBEAFE;border-radius:8px;padding:12px;">
-          <div style="font-weight:700;color:#1E3A5F;margin-bottom:4px;">Random Forest — AUC 0.829 ✦ cel mai bun ROC</div>
-          Separare excelentă a claselor la nivel global. Ansamblul de arbori independenți
-          reduce varianța și gestionează bine interacțiunile dintre variabile.
+          <div style="font-weight:700;color:#1E3A5F;margin-bottom:4px;">Random Forest — AUC 0.868</div>
+          Separare excelentă a claselor. Ansamblul de arbori independenți reduce varianța
+          și gestionează bine interacțiunile complexe dintre variabile.
         </div>
         <div style="background:#D1FAE5;border-radius:8px;padding:12px;">
-          <div style="font-weight:700;color:#065F46;margin-bottom:4px;">XGBoost — AUC 0.803</div>
-          Ușor sub RF pe AUC-ROC, dar construcția sa prin gradient boosting
-          îl face mai sensibil la clasa minoritară — avantaj vizibil pe curba Precision-Recall.
+          <div style="font-weight:700;color:#065F46;margin-bottom:4px;">XGBoost — AUC 0.898 ✦ cel mai bun ROC</div>
+          Cel mai bun AUC-ROC din cei trei algoritmi comparați. Gradient boosting cu
+          regularizare L1/L2 și scale_pos_weight=27.46 oferă separare superioară a claselor.
         </div>
       </div>
       <div style="margin-top:12px;padding-top:10px;border-top:1px solid #E2E8F0;font-size:11.5px;color:#64748B;">
@@ -564,7 +581,7 @@ with tab1:
         decât curba ROC (Davis &amp; Goadrich, ICML 2006). <strong>Precizia</strong> măsoară câte dintre alarmele
         ridicate sunt fraude reale; <strong>Recall-ul</strong> măsoară câte fraude reale au fost detectate.
         Linia punctată reprezintă performanța unui clasificator aleator (bazeline = rata de fraudă ≈ 3.5%).
-        XGBoost obține cel mai bun <strong>AUC-PR (0.377)</strong>, urmat de Random Forest (0.347).
+        XGBoost obține cel mai bun <strong>AUC-PR (0.474)</strong>, urmat de Random Forest (0.422).
         </p>""", unsafe_allow_html=True)
         st.image(pr_png, use_container_width=True)
         st.markdown("""
@@ -575,22 +592,22 @@ with tab1:
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
             <div style="background:#FEF3C7;border-radius:8px;padding:12px;">
-              <div style="font-weight:700;color:#92400E;margin-bottom:4px;">Logistic Regression — AUC-PR 0.056</div>
-              Practic echivalent cu un clasificator aleator (baseline = 0.034).
+              <div style="font-weight:700;color:#92400E;margin-bottom:4px;">Logistic Regression — AUC-PR 0.063</div>
+              Practic echivalent cu un clasificator aleator (baseline = 0.035).
               Curba rămâne aproape de linia punctată pe tot intervalul de recall,
               confirmând că modelul liniar este inadecvat pentru date atât de dezechilibrate.
             </div>
             <div style="background:#DBEAFE;border-radius:8px;padding:12px;">
-              <div style="font-weight:700;color:#1E3A5F;margin-bottom:4px;">Random Forest — AUC-PR 0.347</div>
-              Îmbunătățire drastică față de LR. La recall ≈ 0.2, precizia depășește 80% —
-              adică 4 din 5 alarme ridicate sunt fraude reale. Curba scade treptat
-              pe măsură ce modelul forțează detectarea mai multor fraude.
+              <div style="font-weight:700;color:#1E3A5F;margin-bottom:4px;">Random Forest — AUC-PR 0.422</div>
+              Îmbunătățire drastică față de LR: de 12× mai bun decât baseline.
+              La recall ≈ 0.2, precizia depășește 70% — adică 7 din 10 alarme
+              ridicate sunt fraude reale.
             </div>
             <div style="background:#D1FAE5;border-radius:8px;padding:12px;">
-              <div style="font-weight:700;color:#065F46;margin-bottom:4px;">XGBoost — AUC-PR 0.377 ✦ cel mai bun</div>
-              Curba rămâne consistentă deasupra RF pe aproape tot spectrul de recall.
-              La recall = 0.5, XGBoost menține o precizie cu ~5–8 pp mai ridicată decât RF —
-              un avantaj operațional semnificativ în producție.
+              <div style="font-weight:700;color:#065F46;margin-bottom:4px;">XGBoost — AUC-PR 0.474 ✦ cel mai bun</div>
+              Cel mai bun scor: de 13.5× mai bun decât baseline. Curba rămâne
+              consistentă deasupra RF pe aproape tot spectrul de recall,
+              cu avantaj operațional semnificativ la praguri medii de detecție.
             </div>
           </div>
           <div style="margin-top:12px;padding-top:10px;border-top:1px solid #E2E8F0;font-size:11.5px;color:#64748B;">

@@ -12,11 +12,13 @@ Aplicație demonstrativă pentru detectarea tranzacțiilor bancare frauduloase, 
 
 Compară 3 algoritmi de clasificare pe setul IEEE-CIS Fraud Detection (Kaggle, 590.540 rânduri):
 
-| Model | AUC-ROC | AUC-PR | MCC |
-|---|---|---|---|
-| Logistic Regression | 0.666 | 0.056 | 0.012 |
-| Random Forest | **0.829** | 0.347 | 0.310 |
-| XGBoost | 0.803 | **0.377** | **0.391** |
+| Model | AUC-ROC | AUC-PR | F1 | Recall | MCC |
+|---|---|---|---|---|---|
+| Logistic Regression | 0.700 | 0.063 | 0.093 | 0.871 | 0.100 |
+| Random Forest | 0.868 | 0.422 | 0.267 | 0.694 | 0.295 |
+| XGBoost | **0.898** | **0.474** | **0.299** | **0.741** | **0.332** |
+
+> Antrenat pe setul complet (472.432 tranzacții · split temporal 80/20) · scale\_pos\_weight = 27.46
 
 Explicabilitatea deciziilor este asigurată prin **SHAP** (SHapley Additive exPlanations, Lundberg & Lee 2017), conform cerințelor Art. 13 din EU AI Act și Art. 22 GDPR.
 
@@ -38,6 +40,7 @@ Explicabilitatea deciziilor este asigurată prin **SHAP** (SHapley Additive exPl
 ├── generate_plots.py           # Grafice comparative la 300 DPI (pentru disertație)
 ├── small sample.py             # Eșantion stratificat 5.000 rânduri pentru deploy
 ├── xgboost.json                # Model XGBoost serializat (folosit de Streamlit Cloud)
+├── metrics.json                # Metrici pre-calculate pentru toate 3 modelele (fallback Cloud)
 ├── model_ready_data.pkl        # Eșantion de evaluare (5.000 rânduri, stratificat)
 ├── figures/                    # Grafice pre-generate: ROC, Confusion Matrix, SHAP, PR
 ├── requirements.txt

@@ -1,0 +1,26 @@
+{
+  "Logistic Regression": {
+    "AUC-ROC": 0.7003,
+    "AUC-PR": 0.0631,
+    "F1 (Fraudă)": 0.0925,
+    "Precizie": 0.0489,
+    "Recall": 0.8706,
+    "MCC": 0.0998
+  },
+  "Random Forest": {
+    "AUC-ROC": 0.8677,
+    "AUC-PR": 0.4215,
+    "F1 (Fraudă)": 0.2673,
+    "Precizie": 0.1655,
+    "Recall": 0.6944,
+    "MCC": 0.2954
+  },
+  "XGBoost": {
+    "AUC-ROC": 0.8976,
+    "AUC-PR": 0.4736,
+    "F1 (Fraudă)": 0.2985,
+    "Precizie": 0.1869,
+    "Recall": 0.7406,
+    "MCC": 0.3324
+  }
+}

@@ -6,13 +6,16 @@ import pandas as pd
 import numpy as np
 import os
 import pickle
+import json
+import shutil
 import warnings
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 import xgboost as xgb
 from sklearn.metrics import (
     roc_auc_score, classification_report, confusion_matrix,
-    f1_score, precision_recall_curve, auc as pr_auc, matthews_corrcoef,
+    f1_score, precision_score, recall_score,
+    precision_recall_curve, auc as pr_auc, matthews_corrcoef,
 )
 warnings.filterwarnings("ignore")
 
@@ -85,42 +88,54 @@ if __name__ == "__main__":
     models_dir = os.path.join(base_dir, "data", "models")
     os.makedirs(models_dir, exist_ok=True)
 
-    # Calculam scale_pos_weight pentru XGBoost
-    # Raportul neg/pos reflecta dezechilibrul real (~28:1 pentru IEEE-CIS)
+    # Calculam scale_pos_weight pentru XGBoost din setul complet de antrenare
     neg = int((y_train == 0).sum())
     pos = int((y_train == 1).sum())
     spw = round(neg / pos, 2)
     print(f"\nDistributie clase (train): {neg} negative / {pos} pozitive => scale_pos_weight = {spw}")
 
-    # Esantionare 20% din antrenare (optimizare RAM pentru PoC local)
-    # In mediul de productie se antreaza pe intregul set.
-    sample_size = int(len(X_train) * 0.20)
-    X_sub = X_train.iloc[:sample_size]
-    y_sub = y_train.iloc[:sample_size]
-
-    # Recalculam spw pe esantion
-    neg_s = int((y_sub == 0).sum())
-    pos_s = int((y_sub == 1).sum())
-    spw_s = round(neg_s / pos_s, 2) if pos_s > 0 else spw
-    print(f"Esantion antrenare (20%): {neg_s} negative / {pos_s} pozitive => scale_pos_weight = {spw_s}")
-
     models = {
         "Logistic Regression": LogisticRegression(
             max_iter=500, n_jobs=-1,
-            class_weight="balanced",   # echivalent cu scale_pos_weight pentru LogReg
+            class_weight="balanced",
             solver="lbfgs",
         ),
         "Random Forest": RandomForestClassifier(
             n_estimators=50, max_depth=10, n_jobs=-1,
-            class_weight="balanced",   # corecteaza dezechilibrul de clasa
+            class_weight="balanced",
             random_state=42,
         ),
         "XGBoost": xgb.XGBClassifier(
             n_estimators=100, max_depth=6, learning_rate=0.1,
             n_jobs=-1, random_state=42, eval_metric="logloss",
-            scale_pos_weight=spw_s,    # FIX: parametru pentru dezechilibru clasa
+            scale_pos_weight=spw,
         ),
     }
 
-    train_and_save(models, X_sub, y_sub, X_test, y_test, models_dir)
+    summary = train_and_save(models, X_train, y_train, X_test, y_test, models_dir)
     print("\nToate modelele au fost antrenate si salvate cu succes!")
+
+    # Salveaza metrics.json in radacina repo (folosit de Streamlit Cloud ca fallback)
+    metrics_full = {}
+    for name, model in models.items():
+        yp = model.predict_proba(X_test)[:, 1]
+        yd = model.predict(X_test)
+        pc, rc, _ = precision_recall_curve(y_test, yp)
+        metrics_full[name] = {
+            "AUC-ROC":      round(roc_auc_score(y_test, yp), 4),
+            "AUC-PR":       round(pr_auc(rc, pc), 4),
+            "F1 (Fraudă)":  round(f1_score(y_test, yd, pos_label=1, zero_division=0), 4),
+            "Precizie":     round(precision_score(y_test, yd, pos_label=1, zero_division=0), 4),
+            "Recall":       round(recall_score(y_test, yd, pos_label=1, zero_division=0), 4),
+            "MCC":          round(matthews_corrcoef(y_test, yd), 4),
+        }
+    metrics_path = os.path.join(base_dir, "metrics.json")
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump(metrics_full, f, indent=2, ensure_ascii=False)
+    print(f"Metrici salvate: {metrics_path}")
+
+    # Copiaza xgboost.json in radacina repo pentru Streamlit Cloud
+    src = os.path.join(models_dir, "xgboost.json")
+    dst = os.path.join(base_dir, "xgboost.json")
+    shutil.copy2(src, dst)
+    print(f"xgboost.json copiat in radacina repo.")

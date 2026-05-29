@@ -331,10 +331,10 @@ st.markdown(f"""
       Universitatea „Titu Maiorescu" București · 2026
     </p>
     <div class="badge-row">
+      <span class="badge">Disertație UTM 2026</span>
       <span class="badge">EU AI Act</span>
-      <span class="badge">XGBoost + SHAP</span>
       <span class="badge g">IEEE-CIS Dataset</span>
-      <span class="badge r">High-Risk AI System</span>
+      <span class="badge">GDPR</span>
     </div>
   </div>
   <div style="text-align:right;color:#94AABF;font-size:11px;align-self:flex-end;">
@@ -360,13 +360,16 @@ with tab1:
     n_total = len(y_test)
     n_fraud = int(y_test.sum())
     fraud_pct = n_fraud / n_total * 100
+    tx_sub = ("eșantion stratificat · IEEE-CIS Dataset"
+              if n_total <= 10_000 else
+              "split temporal 80/20 · IEEE-CIS Dataset")
 
     st.markdown(f"""
     <div class="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-label">Tranzacții (set test)</div>
+        <div class="kpi-label">Tranzacții (set evaluare)</div>
         <div class="kpi-value kpi-accent">{n_total:,}</div>
-        <div class="kpi-sub">split temporal 80/20 · IEEE-CIS Dataset</div>
+        <div class="kpi-sub">{tx_sub}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Tranzacții frauduloase</div>

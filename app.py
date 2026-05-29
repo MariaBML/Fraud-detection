@@ -287,11 +287,14 @@ def load_metrics_json(base):
 @st.cache_data
 def compute_metrics(_xgb, _X, _y, _sk, _json_metrics):
     """Calculează AUC-ROC, AUC-PR, F1, Precizie, Recall, MCC.
-    Modele disponibile local: calcul live. Modele lipsă: fallback din metrics.json."""
-    # Porneste cu metricile pre-calculate din JSON (toate 3 modelele)
-    out = {k: dict(v) for k, v in _json_metrics.items()}
+    Pe Cloud (eșantion stratificat ≤10k): folosește metrics.json evaluat pe setul complet (118.108 tranzacții).
+    Local (split temporal complet): calcul live pe setul real de test."""
+    # Pe Cloud — eșantion mic, folosim metricile pre-calculate pe setul complet
+    if len(_y) <= 10_000 and _json_metrics:
+        return {k: dict(v) for k, v in _json_metrics.items()}
 
-    # Suprascrie cu calcul live pentru modelele disponibile
+    # Local — setul complet disponibil, calcul live
+    out = {k: dict(v) for k, v in _json_metrics.items()}
     all_m = {**_sk, "XGBoost": _xgb}
     for name, model in all_m.items():
         yp = model.predict_proba(_X)[:, 1]
@@ -360,7 +363,7 @@ with tab1:
     n_total = len(y_test)
     n_fraud = int(y_test.sum())
     fraud_pct = n_fraud / n_total * 100
-    tx_sub = ("eșantion stratificat · IEEE-CIS Dataset"
+    tx_sub = ("eșantion stratificat din 118.108 · IEEE-CIS Dataset"
               if n_total <= 10_000 else
               "split temporal 80/20 · IEEE-CIS Dataset")
 
@@ -446,10 +449,10 @@ with tab1:
         ax.spines["bottom"].set_color("#E2E8F0")
         ax.grid(axis="x", alpha=0.2, color="#CBD5E1")
 
-    json_note = (" · LR & RF: evaluate pe setul complet (118.108 tranzacții)"
-                 if len(sk_models) < 2 and json_metrics else "")
-    fig_mini.text(0.02, 0.005,
-                  f"Evaluat pe {data_note}{json_note}",
+    _metrics_note = ("Metrici evaluate pe setul complet de test · 118.108 tranzacții · split temporal 80/20"
+                     if n_total <= 10_000 else
+                     f"Evaluat pe {data_note}")
+    fig_mini.text(0.02, 0.005, _metrics_note,
                   fontsize=8.5, color="#94A3B8", ha="left")
     st.pyplot(fig_mini, use_container_width=True)
     plt.close(fig_mini)

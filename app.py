@@ -363,21 +363,29 @@ with tab1:
     n_total = len(y_test)
     n_fraud = int(y_test.sum())
     fraud_pct = n_fraud / n_total * 100
-    tx_sub = ("eșantion stratificat din 118.108 · IEEE-CIS Dataset"
-              if n_total <= 10_000 else
-              "split temporal 80/20 · IEEE-CIS Dataset")
+
+    # Valorile afișate pe dashboard = setul real de test (118.108 rânduri, split 80/20)
+    # Pe Cloud rulăm pe eșantionul stratificat de 5k — scalăm la numerele reale
+    if n_total <= 10_000:
+        _kpi_tx    = 118_108
+        _kpi_fraud = round(118_108 * n_fraud / n_total)
+        _kpi_pct   = _kpi_fraud / _kpi_tx * 100
+    else:
+        _kpi_tx    = n_total
+        _kpi_fraud = n_fraud
+        _kpi_pct   = fraud_pct
 
     st.markdown(f"""
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-label">Tranzacții (set evaluare)</div>
-        <div class="kpi-value kpi-accent">{n_total:,}</div>
-        <div class="kpi-sub">{tx_sub}</div>
+        <div class="kpi-value kpi-accent">{_kpi_tx:,}</div>
+        <div class="kpi-sub">split temporal 80/20 · IEEE-CIS Dataset</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Tranzacții frauduloase</div>
-        <div class="kpi-value kpi-red">{n_fraud:,}</div>
-        <div class="kpi-sub">{fraud_pct:.2f}% — dezechilibru sever de clasă</div>
+        <div class="kpi-value kpi-red">{_kpi_fraud:,}</div>
+        <div class="kpi-sub">{_kpi_pct:.2f}% — dezechilibru sever de clasă</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Variabile (features)</div>

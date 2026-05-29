@@ -389,35 +389,70 @@ with tab1:
     </div>
     """, unsafe_allow_html=True)
 
-    # Metrics table
+    # Mini bar charts — câte un grafic per metrică, grid 2×3
     st.markdown('<div class="sec-title">Comparație Performanță Algoritmi</div>', unsafe_allow_html=True)
     metrics = compute_metrics(xgb_model, X_test, y_test, sk_models, json_metrics)
-    MK = ["AUC-ROC", "AUC-PR", "F1 (Fraudă)", "Precizie", "Recall", "MCC"]
+    MK = ["AUC-ROC", "AUC-PR", "Recall", "MCC"]
     ORDER = ["Logistic Regression", "Random Forest", "XGBoost"]
     avail = [m for m in ORDER if m in metrics]
-    best  = {k: max(metrics[m][k] for m in avail) for k in MK}
 
-    hdr = "".join(f"<th>{m}</th>" for m in avail)
-    body = ""
-    for k in MK:
-        row = f"<td><strong>{k}</strong></td>"
-        for m in avail:
-            v = metrics[m][k]
-            css = ' class="best"' if v >= best[k] - 1e-4 else ""
-            row += f"<td{css}>{v:.4f}</td>"
-        body += f"<tr>{row}</tr>"
+    _mc = {"Logistic Regression": "#DC2626",
+           "Random Forest":       "#F59E0B",
+           "XGBoost":             "#16A34A"}
+    _ml = {"Logistic Regression": "Logistic Reg.",
+           "Random Forest":       "Random Forest",
+           "XGBoost":             "XGBoost"}
+    _mt = {"AUC-ROC": "AUC-ROC",
+           "AUC-PR":  "AUC-PR (Precision-Recall)",
+           "Recall":  "Recall (Sensibilitate)",
+           "MCC":     "MCC (Matthews Correlation)"}
 
-    json_note = (" · <em>LR &amp; RF: metrici evaluate pe setul complet (118.108 tranzacții)</em>"
+    _n_cols = 2
+    _n_rows = len(MK) // _n_cols   # 2 rows
+
+    fig_mini, axes = plt.subplots(
+        _n_rows, _n_cols,
+        figsize=(11, _n_rows * 2.8),
+        facecolor="#F8FAFC",
+    )
+    fig_mini.subplots_adjust(hspace=0.52, wspace=0.30)
+
+    for idx, metric in enumerate(MK):
+        ax = axes[idx // _n_cols][idx % _n_cols]
+        vals   = [metrics.get(m, {}).get(metric, 0) for m in avail]
+        labels = [_ml[m] for m in avail]
+        colors = [_mc[m] for m in avail]
+
+        bars = ax.barh(range(len(avail)), vals,
+                       color=colors, height=0.52, alpha=0.88)
+        for bar, v in zip(bars, vals):
+            ax.text(v + 0.012, bar.get_y() + bar.get_height() / 2,
+                    f"{v:.2f}", va="center", ha="left",
+                    fontsize=9, fontweight="700", color="#334155")
+
+        ax.set_yticks(range(len(avail)))
+        ax.set_yticklabels(labels, fontsize=9.5, color="#334155")
+        ax.set_xlim(0, 1.0)
+        ax.xaxis.set_major_locator(plt.MultipleLocator(0.20))
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.2f}"))
+        ax.tick_params(axis="x", labelsize=8, labelcolor="#94A3B8")
+        ax.tick_params(axis="y", left=False)
+        ax.set_title(_mt.get(metric, metric), fontsize=10.5,
+                     fontweight="700", color="#0D1B2A", pad=8, loc="left")
+        ax.set_facecolor("#FFFFFF")
+        for sp in ["top", "right"]:
+            ax.spines[sp].set_visible(False)
+        ax.spines["left"].set_color("#E2E8F0")
+        ax.spines["bottom"].set_color("#E2E8F0")
+        ax.grid(axis="x", alpha=0.2, color="#CBD5E1")
+
+    json_note = (" · LR & RF: evaluate pe setul complet (118.108 tranzacții)"
                  if len(sk_models) < 2 and json_metrics else "")
-    st.markdown(f"""
-    <table class="cmp-table">
-      <thead><tr><th>Metrică</th>{hdr}</tr></thead>
-      <tbody>{body}</tbody>
-    </table>
-    <p style="font-size:11px;color:#94A3B8;margin-top:8px;">
-      ✦ Valorile <span style="color:#059669;font-weight:700;">verzi</span>
-      indică cel mai bun scor per metrică · Evaluat pe {data_note}{json_note}
-    </p>""", unsafe_allow_html=True)
+    fig_mini.text(0.02, 0.005,
+                  f"Evaluat pe {data_note}{json_note}",
+                  fontsize=8.5, color="#94A3B8", ha="left")
+    st.pyplot(fig_mini, use_container_width=True)
+    plt.close(fig_mini)
 
     with st.expander("📖 Ce înseamnă aceste metrici?"):
         st.markdown("""

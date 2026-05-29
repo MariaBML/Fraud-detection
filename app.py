@@ -336,12 +336,12 @@ st.markdown(f"""
     <div class="badge-row">
       <span class="badge">Disertație UTM 2026</span>
       <span class="badge">EU AI Act</span>
-      <span class="badge g">IEEE-CIS Dataset</span>
+      <span class="badge badge-g">IEEE-CIS Dataset</span>
       <span class="badge">GDPR</span>
     </div>
   </div>
   <div style="text-align:right;color:#94AABF;font-size:11px;align-self:flex-end;">
-    {len(X_test):,} tranzacții · {data_note}<br>
+    {"118.108" if len(X_test) <= 10_000 else f"{len(X_test):,}"} tranzacții evaluate · split 80/20<br>
     {X_test.shape[1]} variabile · 3 algoritmi comparați
   </div>
 </div>
@@ -399,9 +399,8 @@ with tab1:
     ORDER = ["Logistic Regression", "Random Forest", "XGBoost"]
     avail = [m for m in ORDER if m in metrics]
 
-    _mc = {"Logistic Regression": "#DC2626",
-           "Random Forest":       "#F59E0B",
-           "XGBoost":             "#16A34A"}
+    # Culori per rang în metrică: verde = cel mai bun, roșu = cel mai slab
+    _rank_palette = ["#DC2626", "#F59E0B", "#16A34A"]   # worst → mid → best
     _ml = {"Logistic Regression": "Logistic Reg.",
            "Random Forest":       "Random Forest",
            "XGBoost":             "XGBoost"}
@@ -424,7 +423,11 @@ with tab1:
         ax = axes[idx // _n_cols][idx % _n_cols]
         vals   = [metrics.get(m, {}).get(metric, 0) for m in avail]
         labels = [_ml[m] for m in avail]
-        colors = [_mc[m] for m in avail]
+        # verde = cel mai bun, roșu = cel mai slab în această metrică
+        _ranked = sorted(range(len(avail)), key=lambda i: vals[i])
+        colors  = [""] * len(avail)
+        for _rank, _idx in enumerate(_ranked):
+            colors[_idx] = _rank_palette[_rank]
 
         bars = ax.barh(range(len(avail)), vals,
                        color=colors, height=0.52, alpha=0.88)
@@ -452,8 +455,10 @@ with tab1:
     _metrics_note = ("Metrici evaluate pe setul complet de test · 118.108 tranzacții · split temporal 80/20"
                      if n_total <= 10_000 else
                      f"Evaluat pe {data_note}")
-    fig_mini.text(0.02, 0.005, _metrics_note,
-                  fontsize=8.5, color="#94A3B8", ha="left")
+    fig_mini.text(0.02, 0.005, _metrics_note, fontsize=8.5, color="#94A3B8", ha="left")
+    fig_mini.text(0.99, 0.005,
+                  "■ verde = cel mai bun   ■ portocaliu = mijloc   ■ roșu = cel mai slab  (per metrică)",
+                  fontsize=8, color="#94A3B8", ha="right")
     st.pyplot(fig_mini, use_container_width=True)
     plt.close(fig_mini)
 
@@ -593,8 +598,8 @@ with tab1:
         </div>
         <div>
           <strong>Random Forest &amp; XGBoost</strong> — echilibru mai bun între FP și FN:
-          ambele modele detectează ~40–50% din fraude (Recall ~0.45), cu o precizie net superioară LR.
-          Numărul de alarme false (FP) este gestionabil operațional față de costul fraudelor ratate.
+          RF detectează ~69% din fraude (Recall 0.694), XGBoost ~74% (Recall 0.741), cu o precizie
+          net superioară LR. Numărul de alarme false (FP) este gestionabil operațional față de costul fraudelor ratate.
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
@@ -652,9 +657,9 @@ with tab1:
             </div>
           </div>
           <div style="margin-top:12px;padding-top:10px;border-top:1px solid #E2E8F0;font-size:11.5px;color:#64748B;">
-            <strong>Concluzie:</strong> Deși Random Forest câștigă pe AUC-ROC, XGBoost este modelul
-            recomandat pentru producție deoarece menține o precizie superioară la recall moderat —
-            reducând numărul de alarme false fără a sacrifica proporțional detectarea fraudelor.
+            <strong>Concluzie:</strong> XGBoost domină pe ambele metrici de ranking — AUC-ROC (0.898) și
+            AUC-PR (0.474) — și este modelul recomandat pentru producție: menține o precizie superioară
+            la recall moderat, reducând alarmele false fără a sacrifica proporțional detectarea fraudelor.
             Alegerea pragului optim depinde de toleranța la risc a instituției financiare.
           </div>
         </div>""", unsafe_allow_html=True)

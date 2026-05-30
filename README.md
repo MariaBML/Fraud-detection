@@ -57,7 +57,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Pipeline complet (antrenare de la zero)
+## Pipeline complet
 
 ```bash
 # 1. Descarcă datele IEEE-CIS din Kaggle și plasează-le în data/raw/
@@ -79,7 +79,7 @@ python "small sample.py"         # → model_ready_data.pkl (rădăcina repo)
 streamlit run app.py
 ```
 
-### Date necesare (excluse din repo — dimensiune prea mare)
+### Date necesare (dimensiune prea mare)
 
 Descarcă de pe Kaggle: [IEEE-CIS Fraud Detection](https://www.kaggle.com/c/ieee-fraud-detection/data)
 
